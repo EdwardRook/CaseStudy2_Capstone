@@ -1,0 +1,126 @@
+# Install and load library pacakes
+install.packages("skimr")
+install.packages("janitor")
+install.packages("lubridate")
+install.packages("here")
+install.packages("tidyverse")
+library(skimr)
+library(janitor)
+library(lubridate)
+library(here)
+library(tidyverse)
+
+# Set my working directory so I can use loaded csv's
+setwd("/cloud/project/Case Study/Case_Study_2_RD")
+
+# Assign new names and import my datasets
+daily_activity <- read.csv("dailyActivity_merged.csv")
+daily_sleep <- read.csv("sleepDay_merged.csv")
+weight <- read.csv("weightLogInfo_merged.csv")
+heartrate_seconds <- read.csv("heartrate_seconds_merged.csv")
+hourly_calories <- read.csv("hourlyCalories_merged.csv")
+hourly_intensity <- read.csv("hourlyIntensities_merged.csv")
+hourly_steps <- read.csv("hourlySteps_merged.csv")
+
+# Check my data has loaded correctly
+head(daily_activity)
+head(daily_sleep)
+head(weight)
+head(heartrate_seconds)
+head(hourly_calories)
+head(hourly_intensity)
+head(hourly_steps)
+
+# I want to use heartrate in my analysis. Data is currently in seconds and need to convert to seconds
+# First I want to convert 'Time' into a datetime datatype
+heartrate_seconds <- heartrate_seconds %>%
+ mutate(Time = mdy_hms(Time))
+
+# Now I can create a new dataset for average hourly hearate
+hourly_heartrate <- heartrate_seconds %>%
+ mutate(ActivityHour = floor_date(Time, unit = "hour")) %>%
+ group_by(Id, ActivityHour) %>%
+ summarise(ave_heartrate = mean(Value, na.rm = TRUE), .groups = 'drop')
+
+# I would like to merge hourly_calories, hourly_heartrate, hourley_intensity, and hourly_steps into one table called hourly_activity.
+# Similar to above I want to convert 'ActivityHour' into a datetime datatype
+hourly_calories <- hourly_calories %>% 
+  mutate(ActivityHour = mdy_hms(ActivityHour))
+hourly_intensity <- hourly_intensity %>% 
+  mutate(ActivityHour = mdy_hms(ActivityHour))
+hourly_steps <- hourly_steps %>% 
+  mutate(ActivityHour = mdy_hms(ActivityHour))
+
+# Now I can merge into a new dataset called hourly_activity
+hourly_activity <- merge(hourly_intensity, hourly_calories, by=c("Id", "ActivityHour"))
+hourly_activity <- merge(hourly_activity, hourly_steps, by=c("Id", "ActivityHour"))
+hourly_activity <- merge(hourly_activity, hourly_heartrate, by=c("Id", "ActivityHour"))
+
+# Check my dataset
+View(hourly_activity)
+
+# Understand the number of participants I have in each dataset
+n_distinct(hourly_activity$Id)
+n_distinct(daily_activity$Id)
+n_distinct(daily_sleep$Id)
+n_distinct(weight$Id)
+
+# When I merged  the hourly_heartrate dataset this reduced my participants to 14, instead of the 33 it should be. This will be removed from hourly_activity
+hourly_activity <- merge(hourly_intensity, hourly_calories, by=c("Id", "ActivityHour"))
+hourly_activity <- merge(hourly_activity, hourly_steps, by=c("Id", "ActivityHour"))
+
+# Weight also removed from my analysis. Only 8 different participants. Analysis will continue with daily_activity, daily_sleep, and hour_activity (without hourly heartrate)
+
+# Clean column names 
+clean_names(daily_activity)
+clean_names(daily_sleep)
+clean_names(hourly_activity)
+
+# Remove capital letters
+daily_activity <- rename_with(daily_activity, tolower)
+daily_sleep <- rename_with(daily_sleep, tolower)
+hourly_activity <- rename_with(hourly_activity, tolower)
+
+# Check for duplicates
+sum(duplicated(daily_activity))
+sum(duplicated(daily_sleep))
+sum(duplicated(hourly_activity))
+
+# Duplicates found in daily sleep. Removed and checked again
+daily_sleep <- unique(daily_sleep)
+sum(duplicated(daily_sleep))
+
+# In an earlier step I had converted the "activitydate" in hourly_activity to the correct format. This needs to be done for these two datasets as well
+daily_activity$activitydate <- mdy(daily_activity$activitydate)
+daily_sleep$sleepday <- mdy_hms(daily_sleep$sleepday)
+
+# Added a column for the day of the week (1 through 7)
+daily_activity$day_of_week <- wday(daily_activity$activitydate) 
+
+# Each corresponding number there named day of the week.
+daily_activity <- daily_activity %>% mutate(day_of_week = recode(day_of_week
+                                                                 ,"1" = "Sunday"
+                                                                 ,"2" = "Monday"
+                                                                 ,"3" = "Tuesday"
+                                                                 ,"4" = "Wednesday"
+                                                                 ,"5" = "Thursday"
+                                                                 ,"6" = "Friday"
+                                                                 ,"7" = "Saturday"))
+
+# Sorted in order from Monday to Sunday
+daily_activity$day_of_week <- ordered(daily_activity$day_of_week, levels=c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"))
+
+# Added a column to determine how much daily activity each participant is getting and rounded.
+daily_activity$total_active_hours = (daily_activity$fairlyactiveminutes  + daily_activity$lightlyactiveminutes + daily_activity$sedentaryminutes + daily_activity$veryactiveminutes)/60
+daily_activity$total_active_hours <- round(daily_activity$total_active_hours,2)
+
+# Added a column to show the number of hours the participants were in bed and sleep for, and rounded (currently in minutes)
+daily_sleep$hours_in_bed <- round((daily_sleep$totalminutesasleep)/60,1)
+daily_sleep$hours_asleep <- round((daily_sleep$totaltimeinbed)/60,1)
+
+# Finally, I can export my data ready for the visualisation stage.
+write.csv(daily_activity, "/cloud/project/Case Study/Case_Study_2_RD/Clean_Data/daily_activity.csv")
+write.csv(daily_sleep, "/cloud/project/Case Study/Case_Study_2_RD/Clean_Data/daily_sleep.csv")
+write.csv(hourly_activity, "/cloud/project/Case Study/Case_Study_2_RD/Clean_Data/hourly_activity.csv")
+
+
