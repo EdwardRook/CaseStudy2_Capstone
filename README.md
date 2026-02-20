@@ -1,11 +1,16 @@
 # Case Study 2:How Can a Wellness Technology Company Play It Smart
 ## A Google Data Analytics Professional Certificate Capstone Project
+
 The goal of this case study is to follow the steps of the data analysis process : Ask, Prepare, Process, Analyze, Share and Act. 
 
+<img align="right" width="400" height="200" src="https://github.com/EdwardRook/Case-Study-2-How-Can-a-Wellness-Technology-Company-Play-It-Smart-/blob/main/Bellabeat_logo.webp.png">
+
 [Bellabeat]( https://bellabeat.com/) is a high-tech maufacture of health-focused products for women. Bellabeat's co-founder, Urška Sršen believes that analysising smart device fitness data could help unlock new growth opportunities for the company.
+
 I, a Junior Data Analyst have been asked to analyse data from FitBit to see how consumers are using their smart devices.
 
 ## Ask
+
 ### Key Stakeholders
 1. Urška Sršen: Bellabeat’s cofounder and Chief Creative Officer
 
